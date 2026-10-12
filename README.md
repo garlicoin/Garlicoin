@@ -11,13 +11,17 @@ Garlicoin Core
 ![Latest release 0.18.4](https://img.shields.io/badge/latest%20release-0.18.4-blue)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue)
 
-This repository is a maintained fork of [GarlicoinOrg/Garlicoin](https://github.com/GarlicoinOrg/Garlicoin), focused on keeping the Garlicoin Core 0.18.x line buildable, testable and maintainable on current systems.
+This is the actively maintained Garlicoin Core repository under the [garlicoin](https://github.com/garlicoin) GitHub organization, continuing the historical [GarlicoinOrg/Garlicoin](https://github.com/GarlicoinOrg/Garlicoin) codebase.
+
+Official website: [garlicoin.io](https://garlicoin.io/)
+
+Network infrastructure, explorer and project services: [grlc.eu](https://grlc.eu/)
 
 The current `master` source and latest published binary release are **Garlicoin Core 0.18.4**.
 
-The maintenance line preserves Garlicoin consensus, Allium proof of work, DarkGravityWave, wallet format, address formats, network identity and existing user datadirs. Garlicoin is Litecoin-derived, with Litecoin Core 0.18.1 used as the primary upstream reference for compatible maintenance fixes.
+The maintained 0.18.x line preserves Garlicoin consensus, Allium proof of work, DarkGravityWave, wallet format, address formats, network identity and existing user datadirs. Garlicoin is Litecoin-derived, with Litecoin Core 0.18.1 used as the primary upstream reference for compatible maintenance fixes.
 
-Maintained builds are identified as the **grlc.eu edition (2026)** to distinguish the actively maintained binaries from older upstream builds.
+The **0.18.4** release was published as the **GRLC.eu Maintenance Release**, reflecting the infrastructure and maintenance work used to revive the 0.18.x line. The project itself remains Garlicoin Core.
 
 Current maintenance baseline
 ----------------------------
@@ -99,7 +103,7 @@ The `master` branch is the maintained integration branch. Maintenance changes sh
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Official historical Garlicoin release tags remain available in the [upstream repository](https://github.com/GarlicoinOrg/Garlicoin/tags).
+Historical Garlicoin release tags remain available in the [previous GarlicoinOrg repository](https://github.com/GarlicoinOrg/Garlicoin/tags).
 
 Community discussion: [Discord](https://discord.gg/mmAb4ewGb6)
 
