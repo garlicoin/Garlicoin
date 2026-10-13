@@ -3,11 +3,11 @@
 <plist version="0.9">
 <dict>
   <key>LSMinimumSystemVersion</key>
-  <string>10.13.0</string>
+  <string>@OSX_APP_MIN_VERSION@</string>
 
   <key>LSArchitecturePriority</key>
   <array>
-    <string>x86_64</string>
+    <string>@OSX_APP_ARCH@</string>
   </array>
 
   <key>CFBundleIconFile</key>

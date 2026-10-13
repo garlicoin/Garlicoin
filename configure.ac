@@ -382,6 +382,18 @@ case $host in
      ;;
   *darwin*)
      TARGET_OS=darwin
+     case $host_cpu in
+       aarch64|arm64)
+         OSX_APP_ARCH=arm64
+         OSX_APP_MIN_VERSION=11.0
+         ;;
+       *)
+         OSX_APP_ARCH=x86_64
+         OSX_APP_MIN_VERSION=10.13.0
+         ;;
+     esac
+     AC_SUBST([OSX_APP_ARCH])
+     AC_SUBST([OSX_APP_MIN_VERSION])
      LEVELDB_TARGET_FLAGS="-DOS_MACOSX"
      if  test x$cross_compiling != xyes; then
        BUILD_OS=darwin
