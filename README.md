@@ -17,7 +17,7 @@ Official website: [garlicoin.io](https://garlicoin.io/)
 
 Network infrastructure, explorer and project services: [grlc.eu](https://grlc.eu/)
 
-The current `master` source and latest published binary release are **Garlicoin Core 0.18.4**.
+The latest published binary release is **Garlicoin Core 0.18.4**. The `master` branch contains additional maintenance work, including native Apple Silicon ARM64 support, intended for a future maintenance release.
 
 The maintained 0.18.x line preserves Garlicoin consensus, Allium proof of work, DarkGravityWave, wallet format, address formats, network identity and existing user datadirs. Garlicoin is Litecoin-derived, with Litecoin Core 0.18.1 used as the primary upstream reference for compatible maintenance fixes.
 
@@ -26,20 +26,23 @@ The **0.18.4** release was published as the **GRLC.eu Maintenance Release**, ref
 Current maintenance baseline
 ----------------------------
 
-The maintained 0.18.4 source line includes:
+The maintained 0.18.x source line currently includes:
 
 - Qt **5.15.19**;
 - OpenSSL **3.5.9**;
 - Berkeley DB **4.8.30** wallet compatibility;
 - Linux x86_64 build and release validation;
 - Windows x86_64 MinGW build and release validation;
-- native macOS x86_64 validation with Xcode 16 / macOS SDK 15.0;
+- native macOS Intel x86_64 validation with Xcode 16 / macOS SDK 15.0, retaining deployment target **10.13**;
+- native macOS Apple Silicon ARM64 validation with Xcode 16 / macOS SDK 15.0 and deployment target **11.0**;
 - Python 3.12+ compatible P2P functional-test transport;
 - removal of the legacy BIP70 Payment Protocol runtime and implementation while keeping normal `garlicoin:` payment URI support;
 - maintained dependency sources, build-system fixes and selected security/robustness backports;
 - original wallet appearance with corrected Qt High-DPI scaling and refreshed Garlicoin / grlc.eu maintenance branding.
 
 These maintenance changes are intended to improve buildability, portability and maintainability without changing the existing Garlicoin network or wallet compatibility.
+
+Native Apple Silicon support is present on `master`, but it is **not part of the published v0.18.4 downloads**. The current v0.18.4 macOS release artifacts remain Intel x86_64 builds.
 
 Latest published release
 ------------------------
@@ -77,7 +80,7 @@ Platform notes:
 - Linux / Unix: [`doc/build-unix.md`](doc/build-unix.md)
 - Ubuntu toolchain validation: [`doc/ubuntu-toolchain.md`](doc/ubuntu-toolchain.md)
 - Windows x86_64: [`doc/build-windows.md`](doc/build-windows.md)
-- macOS x86_64: [`doc/build-osx.md`](doc/build-osx.md)
+- macOS Intel x86_64 / Apple Silicon ARM64: [`doc/build-osx.md`](doc/build-osx.md)
 
 Testing
 -------
