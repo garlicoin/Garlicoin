@@ -242,6 +242,12 @@ case $os in
 esac
 
 # Decode aliases for certain CPU-COMPANY combinations.
+# Apple names AArch64 arm64; retain the GNU canonical CPU name.
+case $basic_machine in
+	arm64-*) basic_machine=aarch64-${basic_machine#arm64-} ;;
+	arm64) basic_machine=aarch64 ;;
+esac
+
 case $basic_machine in
 	# Recognize the basic CPU types without company name.
 	# Some are omitted here because they have special meanings below.
