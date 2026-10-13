@@ -1,6 +1,9 @@
 name: Release Validation CI
 
 on:
+  push:
+    branches:
+      - maintenance/macos-arm64
   pull_request:
     branches:
       - master
@@ -13,6 +16,7 @@ on:
       - 'depends/**'
       - 'share/**'
       - 'contrib/macdeploy/**'
+      - 'contrib/arm64/**'
   workflow_dispatch:
 
 permissions:
@@ -348,3 +352,376 @@ jobs:
           name: release-macos-x86_64
           path: artifacts/
           if-no-files-found: error
+
+  macos-arm64-release:
+    name: macOS arm64 native release package
+    runs-on: macos-15
+    timeout-minutes: 240
+    defaults:
+      run:
+        shell: bash
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '11.0'
+      DEVELOPER_DIR: /Applications/Xcode_16.app/Contents/Developer
+      SOURCE_DATE_EPOCH: '1'
+      QT_RCC_SOURCE_DATE_OVERRIDE: '1'
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+      HOMEBREW_NO_INSTALL_CLEANUP: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Apple Silicon runner, Xcode and SDK
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = arm64
+          test -d "$DEVELOPER_DIR"
+          xcodebuild -version
+          sdk="$(xcrun --sdk macosx --show-sdk-path)"
+          sdk_version="$(xcrun --sdk macosx --show-sdk-version)"
+          test "$sdk_version" = 15.0
+          echo "SDKROOT=$sdk" >> "$GITHUB_ENV"
+          echo "OSX_SDK_VERSION=$sdk_version" >> "$GITHUB_ENV"
+
+      - name: Install macOS release tools
+        run: |
+          brew install autoconf automake libtool pkg-config make
+          gmake --version
+
+      - name: Cache macOS native depends
+        uses: actions/cache/restore@v4
+        id: arm64-depends
+        with:
+          path: |
+            depends/built
+            depends/sources
+          key: garlicoin-release-macos-native-arm64-${{ github.repository }}-xcode16.0-sdk15.0-min11.0-${{ hashFiles('depends/**') }}
+          restore-keys: |
+            garlicoin-release-macos-native-arm64-${{ github.repository }}-xcode16.0-sdk15.0-min11.0-
+
+      - name: Build native macOS dependencies
+        run: |
+          set -euo pipefail
+          host="$(depends/config.guess)"
+          case "$host" in aarch64-apple-darwin*) ;; *) echo "Unexpected native host $host"; exit 1;; esac
+          echo "HOST=$host" >> "$GITHUB_ENV"
+          gmake -j3 -C depends HOST="$host" \
+            OSX_MIN_VERSION="$MACOSX_DEPLOYMENT_TARGET" \
+            OSX_SDK_VERSION="$OSX_SDK_VERSION" OSX_SDK="$SDKROOT" \
+            darwin_CXX="$(xcrun -f clang++) -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET -stdlib=libc++ -Wno-error=enum-constexpr-conversion" \
+            HOST_ID_SALT=native-xcode16-enum-compat \
+            darwin_native_packages= \
+            qt_config_opts_darwin="-platform macx-clang -no-framework QMAKE_APPLE_DEVICE_ARCHS=arm64 QMAKE_MACOSX_DEPLOYMENT_TARGET=11.0"
+          prefix="$PWD/depends/$host"
+          test -f "$prefix/lib/libssl.a"
+          test -f "$prefix/lib/libcrypto.a"
+          test -f "$prefix/lib/libdb_cxx-4.8.a"
+          PKG_CONFIG_LIBDIR="$prefix/lib/pkgconfig" pkg-config --modversion Qt5Core | grep -qx '5.15.19'
+          grep -q 'OpenSSL 3.5.9' "$prefix/include/openssl/opensslv.h"
+
+      - name: Validate every depends archive
+        run: |
+          set -euo pipefail
+          find "depends/$HOST" -name '*.a' -print0 | while IFS= read -r -d '' archive; do
+            file "$archive"
+            test "$(lipo -archs "$archive")" = arm64
+          done
+          for tool in ccache protoc moc rcc lrelease lupdate; do
+            binary="depends/$HOST/native/bin/$tool"
+            test -f "$binary"
+            test "$(lipo -archs "$binary")" = arm64
+          done
+
+      - name: Save completed native dependency cache
+        uses: actions/cache/save@v4
+        if: steps.arm64-depends.outputs.cache-hit != 'true'
+        with:
+          path: |
+            depends/built
+            depends/sources
+          key: ${{ steps.arm64-depends.outputs.cache-primary-key }}
+
+      - name: Configure and build macOS release
+        run: |
+          set -euo pipefail
+          ./autogen.sh
+          CRYPTO_CFLAGS="-I$PWD/depends/$HOST/include" \
+          CRYPTO_LIBS="$PWD/depends/$HOST/lib/libcrypto.a" \
+          CONFIG_SITE="$PWD/depends/$HOST/share/config.site" \
+            ./configure \
+              --prefix=/ \
+              --enable-wallet \
+              --with-gui=qt5 \
+              --enable-tests \
+              --disable-bench
+          VERSION="$(sed -n 's/^PACKAGE_VERSION = //p' Makefile)"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          gmake -j3
+
+      - name: Validate macOS binaries and package tarball
+        run: |
+          set -euo pipefail
+          rm -rf release-package artifacts
+          mkdir -p "release-package/garlicoin-${VERSION}/bin" artifacts
+          python3 - <<'PY'
+          import os, pathlib, re, shutil, subprocess
+          root = pathlib.Path.cwd()
+          out = root / 'release-package' / f"garlicoin-{os.environ['VERSION']}" / 'bin'
+          bins = {
+              'garlicoind': root / 'src/garlicoind',
+              'garlicoin-cli': root / 'src/garlicoin-cli',
+              'garlicoin-tx': root / 'src/garlicoin-tx',
+              'garlicoin-qt': root / 'src/qt/garlicoin-qt',
+          }
+          for name, binary in bins.items():
+              assert binary.is_file(), binary
+              kind = subprocess.check_output(['file', str(binary)], text=True)
+              assert 'Mach-O 64-bit executable arm64' in kind, kind
+              assert subprocess.check_output(['lipo', '-archs', str(binary)], text=True).strip() == 'arm64'
+              deps = subprocess.check_output(['otool', '-L', str(binary)], text=True)
+              for line in deps.splitlines()[1:]:
+                  dep = line.strip().split(' (', 1)[0]
+                  assert dep.startswith(('/usr/lib/', '/System/Library/')), dep
+                  assert not re.search(r'(libssl|libcrypto|Qt[0-9]|libdb)', dep, re.I), dep
+              commands = subprocess.check_output(['otool', '-l', str(binary)], text=True)
+              targets = re.findall(r'cmd LC_(?:BUILD_VERSION|VERSION_MIN_MACOSX)\n(?:(?!\nLoad command).)*?\n\s+(?:minos|version)\s+(\S+)', commands, re.S)
+              assert len(targets) == 1 and targets[0] in ('11.0', '11.0.0'), (name, targets)
+              shutil.copy2(binary, out / name)
+          PY
+          cp README.md "release-package/garlicoin-${VERSION}/"
+          tar -C release-package -czf "artifacts/garlicoin-${VERSION}-osx-arm64.tar.gz" "garlicoin-${VERSION}"
+
+      - name: Build and validate macOS app and DMG
+        run: |
+          set -euo pipefail
+          gmake appbundle
+          codesign --force --sign - --timestamp=none Garlicoin-Qt.app
+          codesign --verify --deep --strict Garlicoin-Qt.app
+          appbin="Garlicoin-Qt.app/Contents/MacOS/Garlicoin-Qt"
+          test -f "$appbin"
+          file "$appbin" | grep -q 'Mach-O 64-bit executable arm64'
+          lipo -archs "$appbin" | grep -qx 'arm64'
+          otool -L "$appbin" | tail -n +2 | while IFS= read -r line; do
+            dep="$(printf '%s\n' "$line" | sed 's/^[[:space:]]*//; s/ (.*$//')"
+            case "$dep" in
+              /usr/lib/*|/System/Library/*) ;;
+              *) echo "Unexpected dynamic dependency: $dep"; exit 1 ;;
+            esac
+          done
+          rm -rf dmg-root
+          mkdir dmg-root
+          cp -R Garlicoin-Qt.app dmg-root/
+          ln -s /Applications dmg-root/Applications
+          hdiutil create \
+            -volname "Garlicoin Core ${VERSION}" \
+            -srcfolder dmg-root \
+            -ov -format UDZO \
+            "artifacts/garlicoin-${VERSION}-osx-arm64.dmg"
+          test -f "artifacts/garlicoin-${VERSION}-osx-arm64.dmg"
+          file "artifacts/garlicoin-${VERSION}-osx-arm64.dmg"
+          hdiutil verify "artifacts/garlicoin-${VERSION}-osx-arm64.dmg"
+          mount="$RUNNER_TEMP/arm64-dmg"
+          mkdir -p "$mount"
+          hdiutil attach -readonly -nobrowse -mountpoint "$mount" "artifacts/garlicoin-${VERSION}-osx-arm64.dmg"
+          trap 'hdiutil detach "$mount"' EXIT
+          cmp "$appbin" "$mount/$appbin"
+          codesign --verify --deep --strict "$mount/Garlicoin-Qt.app"
+          test "$(lipo -archs "$mount/$appbin")" = arm64
+          python3 - <<'PYBUNDLE'
+          import os, pathlib, plistlib, re, subprocess
+          info = plistlib.loads(pathlib.Path('Garlicoin-Qt.app/Contents/Info.plist').read_bytes())
+          assert info['LSArchitecturePriority'] == ['arm64']
+          assert info['LSMinimumSystemVersion'] == '11.0'
+          assert info['CFBundleExecutable'] == 'Garlicoin-Qt'
+          commands = subprocess.check_output(['otool', '-l', 'Garlicoin-Qt.app/Contents/MacOS/Garlicoin-Qt'], text=True)
+          targets = re.findall(r'cmd LC_(?:BUILD_VERSION|VERSION_MIN_MACOSX)\n(?:(?!\nLoad command).)*?\n\s+(?:minos|version)\s+(\S+)', commands, re.S)
+          assert len(targets) == 1 and targets[0] in ('11.0', '11.0.0'), targets
+          PYBUNDLE
+          python3 contrib/macdeploy/compare-macho-sections.py src/qt/garlicoin-qt "$appbin"
+          QT_QPA_PLATFORM=cocoa python3 contrib/macdeploy/arm64-wallet-smoke.py --node-binary "$mount/$appbin"
+
+      - name: Hash macOS artifacts
+        run: |
+          cd artifacts
+          shasum -a 256 * | tee SHA256SUMS
+
+      - name: Upload macOS release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos-arm64
+          path: artifacts/
+          if-no-files-found: error
+
+      - name: Unit tests and executable smoke tests
+        run: |
+          set -euo pipefail
+          gmake -j3 -C src test/test_garlicoin
+          for suite in compress_tests main_tests base58_tests key_tests/key_test1 sighash_tests/sighash_from_data pow_tests transaction_tests/tx_valid crypto_tests; do
+            src/test/test_garlicoin --run_test="$suite"
+          done
+          gmake -C src/secp256k1 check
+          otool -L src/secp256k1/tests
+          otool -L src/secp256k1/tests | tail -n +2 | while read -r dep rest; do
+            case "$dep" in /usr/lib/*|/System/Library/*) ;; *) exit 1;; esac
+          done
+          python3 contrib/macdeploy/arm64-wallet-smoke.py
+          xcrun clang -Isrc contrib/arm64/allium-vectors.c src/crypto/libbitcoin_crypto.a -o /tmp/allium-vectors
+          test "$(lipo -archs /tmp/allium-vectors)" = arm64
+          /tmp/allium-vectors > /tmp/allium-vectors.actual
+          diff -u contrib/arm64/allium-vectors.expected /tmp/allium-vectors.actual
+          src/garlicoind --version
+          src/garlicoin-cli --version
+          # Legacy garlicoin-tx has no version option: preserve its expected rejection.
+          set +e
+          src/garlicoin-tx --version
+          status=$?
+          set -e
+          test "$status" = 1
+          src/garlicoin-tx -help
+          src/garlicoin-tx -create
+          QT_QPA_PLATFORM=minimal src/qt/garlicoin-qt -version
+
+      - name: Preserve diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos-arm64-diagnostics
+          path: |
+            config.log
+            src/test-suite.log
+            src/test/*.log
+            src/secp256k1/test-suite.log
+            src/secp256k1/Makefile
+            src/**/config.log
+            depends/work/**/config.log
+            depends/work/**/config.summary
+            depends/*/share/config.site
+          if-no-files-found: warn
+
+  wallet-intel-create:
+    name: Create Intel BDB 4.8 test wallet
+    needs: [macos-release]
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download exact-run binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = x86_64
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" -n release-macos-x86_64 -D binaries
+          (cd binaries && shasum -a 256 -c SHA256SUMS)
+          mkdir runtime
+          archives=(binaries/garlicoin-*-osx64.tar.gz)
+          test "${#archives[@]}" = 1
+          tar -xzf "${archives[0]}" --strip-components=1 -C runtime
+          test "$(lipo -archs runtime/bin/garlicoind)" = x86_64
+          mkdir fixture
+      - name: Create Intel BDB 4.8 test wallet
+        run: python3 contrib/macdeploy/wallet-architecture-roundtrip.py initialize --bin-dir runtime/bin --fixture fixture
+      - name: Transfer only the unfunded regtest fixture
+        uses: actions/upload-artifact@v4
+        with:
+          name: wallet-intel-fixture
+          path: fixture/
+          retention-days: 1
+          overwrite: true
+          if-no-files-found: error
+
+  wallet-arm64-update:
+    name: Read and update Intel wallet on ARM64
+    needs: [wallet-intel-create, macos-arm64-release]
+    runs-on: macos-15
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download exact-run binaries and throwaway wallet
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = arm64
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" -n release-macos-arm64 -D binaries
+          (cd binaries && shasum -a 256 -c SHA256SUMS)
+          mkdir runtime
+          archives=(binaries/garlicoin-*-osx-arm64.tar.gz)
+          test "${#archives[@]}" = 1
+          tar -xzf "${archives[0]}" --strip-components=1 -C runtime
+          test "$(lipo -archs runtime/bin/garlicoind)" = arm64
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" -n wallet-intel-fixture -D fixture
+      - name: Read and update Intel wallet on ARM64
+        run: python3 contrib/macdeploy/wallet-architecture-roundtrip.py update --bin-dir runtime/bin --fixture fixture
+      - name: Transfer only the unfunded regtest fixture
+        uses: actions/upload-artifact@v4
+        with:
+          name: wallet-arm64-fixture
+          path: fixture/
+          retention-days: 1
+          overwrite: true
+          if-no-files-found: error
+
+  wallet-intel-readback:
+    name: Read ARM64-written wallet back on Intel
+    needs: [wallet-arm64-update]
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download exact-run binaries and throwaway wallet
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = x86_64
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" -n release-macos-x86_64 -D binaries
+          (cd binaries && shasum -a 256 -c SHA256SUMS)
+          mkdir runtime
+          archives=(binaries/garlicoin-*-osx64.tar.gz)
+          test "${#archives[@]}" = 1
+          tar -xzf "${archives[0]}" --strip-components=1 -C runtime
+          test "$(lipo -archs runtime/bin/garlicoind)" = x86_64
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" -n wallet-arm64-fixture -D fixture
+      - name: Read ARM64-written wallet back on Intel
+        run: python3 contrib/macdeploy/wallet-architecture-roundtrip.py verify --bin-dir runtime/bin --fixture fixture
+
+  wallet-fixture-cleanup:
+    name: Delete throwaway wallet fixtures
+    needs: [wallet-intel-create, wallet-arm64-update, wallet-intel-readback]
+    if: always()
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Remove only this run's generated wallet fixtures
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --paginate \
+            --jq '.artifacts[] | select(.name == "wallet-intel-fixture" or .name == "wallet-arm64-fixture") | .id' > fixture-ids
+          while read -r id; do
+            gh api --method DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+          done < fixture-ids
