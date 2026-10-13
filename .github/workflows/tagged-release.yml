@@ -119,6 +119,15 @@ jobs:
         shell: bash
         run: gh run download "$RELEASE_RUN_ID" -n release-macos-x86_64 -D release-input/macos
 
+      - name: Download macOS ARM64 release artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run download "$RELEASE_RUN_ID" -n release-macos-arm64 -D release-input/macos-arm64
+          (cd release-input/macos-arm64 && sha256sum -c SHA256SUMS)
+
       - name: Assemble and verify release assets
         shell: bash
         run: |
@@ -131,6 +140,8 @@ jobs:
           cp "release-input/windows/garlicoin-${VERSION}-win64-setup.exe" release-assets/
           cp "release-input/macos/garlicoin-${VERSION}-osx64.tar.gz" release-assets/
           cp "release-input/macos/garlicoin-${VERSION}-osx64.dmg" release-assets/
+          cp "release-input/macos-arm64/garlicoin-${VERSION}-osx-arm64.tar.gz" release-assets/
+          cp "release-input/macos-arm64/garlicoin-${VERSION}-osx-arm64.dmg" release-assets/
 
           (
             cd release-assets
