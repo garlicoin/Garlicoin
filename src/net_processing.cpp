@@ -69,6 +69,11 @@ static const int STALE_RELAY_AGE_LIMIT = 30 * 24 * 60 * 60;
 /// limiting block relay. Set to one week, denominated in seconds.
 static const int HISTORICAL_BLOCK_AGE = 7 * 24 * 60 * 60;
 
+/** Average address processing rate; whitelisted peers are exempt. */
+static constexpr double MAX_ADDR_RATE_PER_SECOND = 0.1;
+/** Soft cap for time-based refill; our GETADDR grants extra tokens above it. */
+static constexpr size_t MAX_ADDR_PROCESSING_TOKEN_BUCKET = MAX_ADDR_TO_SEND;
+
 // Internal stuff
 namespace {
     /** Number of nodes with fSyncStarted. */
@@ -1748,6 +1753,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             {
                 connman->PushMessage(pfrom, CNetMsgMaker(nSendVersion).Make(NetMsgType::GETADDR));
                 pfrom->fGetAddr = true;
+                // Accept a full response to our GETADDR, even above the soft cap.
+                pfrom->m_addr_token_bucket += MAX_ADDR_TO_SEND;
             }
             connman->MarkAddressGood(pfrom->addr);
         }
@@ -1854,11 +1861,30 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         std::vector<CAddress> vAddrOk;
         int64_t nNow = GetAdjustedTime();
         int64_t nSince = nNow - 10 * 60;
+        const int64_t current_time = GetTimeMicros();
+        if (pfrom->m_addr_token_bucket < MAX_ADDR_PROCESSING_TOKEN_BUCKET) {
+            const int64_t time_diff = std::max<int64_t>(current_time - pfrom->m_addr_token_timestamp, 0);
+            const double increment = time_diff * 0.000001 * MAX_ADDR_RATE_PER_SECOND;
+            pfrom->m_addr_token_bucket = std::min<double>(pfrom->m_addr_token_bucket + increment, MAX_ADDR_PROCESSING_TOKEN_BUCKET);
+        }
+        pfrom->m_addr_token_timestamp = current_time;
+
+        // Randomize which addresses are processed if the budget runs out.
+        FastRandomContext insecure_rand;
+        for (size_t i = vAddr.size(); i > 1; --i) {
+            std::swap(vAddr[i - 1], vAddr[insecure_rand.randrange(i)]);
+        }
+        const bool rate_limited = !pfrom->fWhitelisted;
         for (CAddress& addr : vAddr)
         {
             if (interruptMsgProc)
                 return true;
 
+            // Charge before any address filtering, addrman update or relay.
+            if (rate_limited) {
+                if (pfrom->m_addr_token_bucket < 1.0) break;
+                pfrom->m_addr_token_bucket -= 1.0;
+            }
             // We only bother storing full nodes, though this may include
             // things which we would not make an outbound connection to, in
             // part because we may make feeler connections to them.

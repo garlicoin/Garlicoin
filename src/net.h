@@ -21,6 +21,7 @@
 #include <sync.h>
 #include <uint256.h>
 #include <threadinterrupt.h>
+#include <utiltime.h>
 
 #include <atomic>
 #include <deque>
@@ -673,6 +674,10 @@ public:
     std::vector<CAddress> vAddrToSend;
     CRollingBloomFilter addrKnown;
     bool fGetAddr;
+    // Address processing budget, accessed only by the message handler thread.
+    // Start at one token to permit self-announcement.
+    double m_addr_token_bucket{1.0};
+    int64_t m_addr_token_timestamp{GetTimeMicros()};
     std::set<uint256> setKnown;
     int64_t nNextAddrSend;
     int64_t nNextLocalAddrSend;
