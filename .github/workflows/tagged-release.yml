@@ -2,9 +2,6 @@ name: Tagged Release Publisher
 
 on:
   create:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
       release_tag:
