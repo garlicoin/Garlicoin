@@ -5,10 +5,10 @@ Garlicoin Core
 [![Ubuntu Toolchain CI](https://github.com/garlicoin/Garlicoin/actions/workflows/ubuntu-toolchain-ci.yml/badge.svg?branch=master)](https://github.com/garlicoin/Garlicoin/actions/workflows/ubuntu-toolchain-ci.yml)
 [![Qt GUI CI](https://github.com/garlicoin/Garlicoin/actions/workflows/qt-ci.yml/badge.svg?branch=master)](https://github.com/garlicoin/Garlicoin/actions/workflows/qt-ci.yml)
 [![Windows MinGW CI](https://github.com/garlicoin/Garlicoin/actions/workflows/windows-ci.yml/badge.svg?branch=master)](https://github.com/garlicoin/Garlicoin/actions/workflows/windows-ci.yml)
-[![Release Validation 0.18.4](https://img.shields.io/badge/release%20validation-0.18.4%20passed-brightgreen)](https://github.com/garlicoin/Garlicoin/actions/runs/38043659670)
+[![Release Validation 0.18.5-rc1](https://img.shields.io/badge/release%20validation-0.18.5--rc1%20passed-brightgreen)](https://github.com/garlicoin/Garlicoin/actions/runs/38521909244)
 ![Maintained 2026](https://img.shields.io/badge/maintained-2026-brightgreen)
-![Source 0.18.4](https://img.shields.io/badge/source-0.18.4-blue)
-![Latest release 0.18.4](https://img.shields.io/badge/latest%20release-0.18.4-blue)
+![Stable release 0.18.4](https://img.shields.io/badge/stable-0.18.4-blue)
+![Prerelease 0.18.5-rc1](https://img.shields.io/badge/prerelease-0.18.5--rc1-orange)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue)
 
 This is the actively maintained Garlicoin Core repository under the [garlicoin](https://github.com/garlicoin) GitHub organization, continuing the historical [GarlicoinOrg/Garlicoin](https://github.com/GarlicoinOrg/Garlicoin) codebase.
@@ -17,7 +17,7 @@ Official website: [garlicoin.io](https://garlicoin.io/)
 
 Network infrastructure, explorer and project services: [grlc.eu](https://grlc.eu/)
 
-The latest published binary release is **Garlicoin Core 0.18.4**. The `master` branch contains additional maintenance work, including native Apple Silicon ARM64 support, intended for a future maintenance release.
+The latest stable release is **Garlicoin Core 0.18.4**. The current public prerelease is **Garlicoin Core 0.18.5-rc1**, which adds native Apple Silicon ARM64 release artifacts alongside Linux x86_64, Windows x86_64 and macOS Intel x86_64 builds.
 
 The maintained 0.18.x line preserves Garlicoin consensus, Allium proof of work, DarkGravityWave, wallet format, address formats, network identity and existing user datadirs. Garlicoin is Litecoin-derived, with Litecoin Core 0.18.1 used as the primary upstream reference for compatible maintenance fixes.
 
@@ -42,33 +42,54 @@ The maintained 0.18.x source line currently includes:
 
 These maintenance changes are intended to improve buildability, portability and maintainability without changing the existing Garlicoin network or wallet compatibility.
 
-Native Apple Silicon support is present on `master`, but it is **not part of the published v0.18.4 downloads**. The current v0.18.4 macOS release artifacts remain Intel x86_64 builds.
+Release status
+--------------
 
-Latest published release
-------------------------
+### Stable: Garlicoin Core 0.18.4
 
-The latest published release is **Garlicoin Core 0.18.4 - GRLC.eu Maintenance Release**.
+Garlicoin Core **v0.18.4** is the latest stable release. It includes validated Linux x86_64, Windows x86_64 and macOS Intel x86_64 artifacts, source code and SHA256 checksums.
 
-[View release notes and all downloads](https://github.com/garlicoin/Garlicoin/releases/tag/v0.18.4)
+[View the v0.18.4 release](https://github.com/garlicoin/Garlicoin/releases/tag/v0.18.4)
 
-Downloads:
+Stable downloads:
 
 - [Windows installer (x86_64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.4/garlicoin-0.18.4-win64-setup.exe)
 - [Windows ZIP (x86_64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.4/garlicoin-0.18.4-win64.zip)
 - [Linux tarball (x86_64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.4/garlicoin-0.18.4-linux-x86_64.tar.gz)
-- [macOS DMG (x86_64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.4/garlicoin-0.18.4-osx64.dmg)
-- [macOS tarball (x86_64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.4/garlicoin-0.18.4-osx64.tar.gz)
+- [macOS DMG (Intel x86_64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.4/garlicoin-0.18.4-osx64.dmg)
+- [macOS tarball (Intel x86_64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.4/garlicoin-0.18.4-osx64.tar.gz)
 - [Source tarball](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.4/garlicoin-0.18.4.tar.gz)
 - [SHA256SUMS](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.4/SHA256SUMS)
 
-Verify downloaded release artifacts against `SHA256SUMS` before installation.
+### Prerelease: Garlicoin Core 0.18.5-rc1
 
-0.18.4 status
--------------
+Garlicoin Core **v0.18.5-rc1** is the current release candidate for the next maintenance release. Its main purpose is to add and validate native Apple Silicon ARM64 support without introducing unrelated consensus, wallet-format or network changes.
 
-Garlicoin Core **v0.18.4** is published with validated Linux, Windows and macOS x86_64 artifacts, source code and SHA256 checksums.
+Automated exact-tag release validation passed for:
 
-See the [v0.18.4 GitHub release](https://github.com/garlicoin/Garlicoin/releases/tag/v0.18.4) for the current maintenance-release notes and final binaries.
+- Linux x86_64;
+- Windows x86_64 MinGW;
+- macOS Intel x86_64;
+- macOS Apple Silicon ARM64;
+- Intel -> ARM64 -> Intel Berkeley DB wallet interchange.
+
+The remaining release-candidate gate is real-device testing of the ARM64 macOS build on an Apple Silicon Mac, including launch / Gatekeeper behavior, wallet creation and reopening, restart and initial synchronization. Until that confirmation is complete, **v0.18.4 remains the recommended stable release**.
+
+[View the v0.18.5-rc1 release](https://github.com/garlicoin/Garlicoin/releases/tag/v0.18.5-rc1)
+
+Prerelease downloads:
+
+- [Windows installer (x86_64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.5-rc1/garlicoin-0.18.5-rc1-win64-setup.exe)
+- [Windows ZIP (x86_64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.5-rc1/garlicoin-0.18.5-rc1-win64.zip)
+- [Linux tarball (x86_64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.5-rc1/garlicoin-0.18.5-rc1-linux-x86_64.tar.gz)
+- [macOS DMG (Intel x86_64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.5-rc1/garlicoin-0.18.5-rc1-osx64.dmg)
+- [macOS tarball (Intel x86_64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.5-rc1/garlicoin-0.18.5-rc1-osx64.tar.gz)
+- [macOS DMG (Apple Silicon ARM64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.5-rc1/garlicoin-0.18.5-rc1-osx-arm64.dmg)
+- [macOS tarball (Apple Silicon ARM64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.5-rc1/garlicoin-0.18.5-rc1-osx-arm64.tar.gz)
+- [Source tarball](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.5-rc1/garlicoin-0.18.5-rc1.tar.gz)
+- [SHA256SUMS](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.5-rc1/SHA256SUMS)
+
+Verify downloaded release artifacts against the corresponding `SHA256SUMS` file before installation.
 
 Building
 --------
@@ -102,7 +123,9 @@ Historical Bitcoin and Litecoin documentation inherited from upstream is not kep
 Development
 -----------
 
-The `master` branch is the maintained integration branch. Maintenance changes should remain narrowly scoped and should not mix routine build/dependency work with consensus or wallet-format changes.
+The `master` branch is the maintained integration branch. The current release goal is to complete real-device Apple Silicon validation and promote the 0.18.5 maintenance line once the release candidate is confirmed.
+
+Maintenance changes should remain narrowly scoped and should not mix routine build/dependency work with consensus or wallet-format changes.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
