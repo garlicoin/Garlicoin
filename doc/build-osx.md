@@ -95,6 +95,10 @@ gmake -j3 -C depends HOST="$HOST" \
   darwin_native_packages= \
   qt_config_opts_darwin="-platform macx-clang -no-framework QMAKE_APPLE_DEVICE_ARCHS=arm64 QMAKE_MACOSX_DEPLOYMENT_TARGET=11.0"
 
+mkdir -p "$HOME/.ccache"
+touch "$HOME/.ccache/ccache.conf"
+"$PWD/depends/$HOST/native/bin/ccache" --show-stats
+
 ./autogen.sh
 CRYPTO_CFLAGS="-I$PWD/depends/$HOST/include" \
 CRYPTO_LIBS="$PWD/depends/$HOST/lib/libcrypto.a" \
@@ -108,6 +112,8 @@ CONFIG_SITE="$PWD/depends/$HOST/share/config.site" \
 
 gmake -j3
 ```
+
+The explicit ccache initialization mirrors the maintained ARM64 release workflow. A fresh runner may not have `$HOME/.ccache/ccache.conf`; creating the directory and empty config before the parallel build prevents the depends-provided ccache wrapper from failing solely because that path is absent.
 
 Explicit `CRYPTO_CFLAGS` and `CRYPTO_LIBS` keep recursive secp256k1 OpenSSL test cross-checks on the pinned `depends` archive. They do not disable those tests.
 
