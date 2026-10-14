@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - maintenance/macos-arm64
+      - ci/macos-arm64-ccache-config
   pull_request:
     branches:
       - master
@@ -440,6 +441,13 @@ jobs:
             depends/built
             depends/sources
           key: ${{ steps.arm64-depends.outputs.cache-primary-key }}
+
+      - name: Initialize native ccache configuration
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.ccache"
+          touch "$HOME/.ccache/ccache.conf"
+          "$PWD/depends/$HOST/native/bin/ccache" --show-stats
 
       - name: Configure and build macOS release
         run: |
