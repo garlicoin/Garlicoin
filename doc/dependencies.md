@@ -57,7 +57,7 @@ For platform-specific commands, see:
 
 - [Unix](build-unix.md)
 - [Windows x86_64](build-windows.md)
-- [macOS x86_64](build-osx.md)
+- [macOS Intel x86_64 and Apple Silicon ARM64](build-osx.md)
 - [Ubuntu toolchain validation](ubuntu-toolchain.md)
 
 For deterministic build-system details, see [`depends/README.md`](../depends/README.md).

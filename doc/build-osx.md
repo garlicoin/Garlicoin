@@ -1,24 +1,23 @@
 macOS BUILD NOTES
 =================
 
-This document describes the native macOS build paths for the maintained Garlicoin Core 0.18.x line.
+This document describes the two native macOS build paths for the maintained Garlicoin Core 0.18.x line. Intel and Apple Silicon are built separately; the project does not currently publish a Universal2 binary.
 
 Validated CI baseline
 ---------------------
 
-The repository currently validates macOS with:
+The repository currently validates:
 
-- Intel x86_64 runner: `macos-15-intel`;
-- Xcode 16;
-- macOS SDK 15.0;
-- deployment target: macOS 10.13;
-- Qt 5.15.19;
-- OpenSSL 3.5.9;
-- Berkeley DB 4.8.30 for wallet compatibility.
+| Target | GitHub runner | Deployment target | Artifact family |
+| --- | --- | ---: | --- |
+| Intel x86_64 | `macos-15-intel` | macOS 10.13 | `osx64` |
+| Apple Silicon ARM64 | `macos-15` | macOS 11.0 | `osx-arm64` |
 
-Qt, OpenSSL, Berkeley DB, and the other pinned dependencies are built through the repository `depends` system. The release build verifies that Qt/OpenSSL/BDB are not left as non-system dynamic dependencies.
+Both paths use Xcode 16, macOS SDK 15.0, Qt 5.15.19, OpenSSL 3.5.9, and Berkeley DB 4.8.30 for wallet compatibility.
 
-The CI baseline is the supported release path. Other macOS/Xcode combinations may work, but are not implied to be validated by this document.
+Qt, OpenSSL, Berkeley DB, and the other pinned dependencies are built through the repository `depends` system. Release validation checks that the expected pinned libraries are used and that non-system Qt/OpenSSL/BDB dynamic dependencies are not left behind.
+
+The CI matrix is the supported release path. Other macOS/Xcode combinations may work, but are not implied to be validated by this document.
 
 Prerequisites
 -------------
@@ -37,12 +36,10 @@ xcodebuild -version
 xcrun --sdk macosx --show-sdk-version
 ```
 
-The validated CI values are `x86_64`, Xcode 16, and SDK 15.0.
+Use a native Intel Mac/runner for the x86_64 build and a native Apple Silicon Mac/runner for the ARM64 build.
 
-Build pinned dependencies
--------------------------
-
-From the repository root:
+Intel x86_64
+------------
 
 ```sh
 export MACOSX_DEPLOYMENT_TARGET=10.13
@@ -50,6 +47,8 @@ export DEVELOPER_DIR=/Applications/Xcode_16.app/Contents/Developer
 export SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
 export OSX_SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
 export HOST="$(depends/config.guess)"
+
+test "$(uname -m)" = x86_64
 
 gmake -j3 -C depends HOST="$HOST" \
   OSX_MIN_VERSION="$MACOSX_DEPLOYMENT_TARGET" \
@@ -59,14 +58,7 @@ gmake -j3 -C depends HOST="$HOST" \
   HOST_ID_SALT=native-xcode16-enum-compat \
   darwin_native_packages= \
   qt_config_opts_darwin="-platform macx-clang -no-framework"
-```
 
-The detected host must be an `x86_64-apple-darwin*` target for the validated release configuration.
-
-Configure and build Core + Qt
------------------------------
-
-```sh
 ./autogen.sh
 CONFIG_SITE="$PWD/depends/$HOST/share/config.site" \
   ./configure \
@@ -78,49 +70,12 @@ CONFIG_SITE="$PWD/depends/$HOST/share/config.site" \
 gmake -j3
 ```
 
-Expected binaries include:
+For the validated Intel release path, `HOST` must resolve to an `x86_64-apple-darwin*` target.
 
-```text
-src/garlicoind
-src/garlicoin-cli
-src/garlicoin-tx
-src/qt/garlicoin-qt
-```
-
-Create the app bundle
----------------------
-
-The native release path creates the application bundle with:
-
-```sh
-gmake appbundle
-```
-
-The resulting GUI executable is located at:
-
-```text
-Garlicoin-Qt.app/Contents/MacOS/Garlicoin-Qt
-```
-
-The release workflow additionally creates and validates the DMG using native macOS tooling.
-
-Verification
-------------
-
-For release work, do not rely only on a successful compile. The maintained release-validation workflow checks the Mach-O architecture, deployment target, static dependency linkage, CLI/GUI version output, app bundle, and release packaging.
-
-See `.github/workflows/release-validation-ci.yml`.
-
-Legacy Linux-to-Darwin cross-build workflows and the temporary Qt 5.15/OpenSSL 3 macOS proof workflow have been removed from the active GitHub Actions set. The Intel release build remains native x86_64 through the release-validation workflow; the separate Apple Silicon path is described below.
-
-Native Apple Silicon ARM64
---------------------------
-
-Apple Silicon is built separately from Intel; this is not a universal/universal2 build. GitHub Actions uses `macos-15`, verifies `uname -m = arm64`, and pins Xcode 16 / SDK 15.0. ARM64 uses deployment target **11.0**. The Intel job above retains **10.13**.
+Apple Silicon ARM64
+-------------------
 
 GNU Autotools calls the canonical CPU `aarch64`; Apple Clang, Mach-O and `lipo` call it `arm64`. The repository config scripts accept `arm64-apple-darwin` and canonicalize it to `aarch64-apple-darwin`. This does not imply emulation.
-
-On a native Apple Silicon Mac, after installing the same build tools:
 
 ```sh
 test "$(uname -m)" = arm64
@@ -133,7 +88,8 @@ export HOST="$(depends/config.guess)"
 
 gmake -j3 -C depends HOST="$HOST" \
   OSX_MIN_VERSION="$MACOSX_DEPLOYMENT_TARGET" \
-  OSX_SDK_VERSION="$OSX_SDK_VERSION" OSX_SDK="$SDKROOT" \
+  OSX_SDK_VERSION="$OSX_SDK_VERSION" \
+  OSX_SDK="$SDKROOT" \
   darwin_CXX="$(xcrun -f clang++) -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET -stdlib=libc++ -Wno-error=enum-constexpr-conversion" \
   HOST_ID_SALT=native-xcode16-enum-compat \
   darwin_native_packages= \
@@ -143,13 +99,46 @@ gmake -j3 -C depends HOST="$HOST" \
 CRYPTO_CFLAGS="-I$PWD/depends/$HOST/include" \
 CRYPTO_LIBS="$PWD/depends/$HOST/lib/libcrypto.a" \
 CONFIG_SITE="$PWD/depends/$HOST/share/config.site" \
-  ./configure --prefix=/ --enable-wallet --with-gui=qt5 --enable-tests --disable-bench
+  ./configure \
+    --prefix=/ \
+    --enable-wallet \
+    --with-gui=qt5 \
+    --enable-tests \
+    --disable-bench
+
 gmake -j3
 ```
 
-Explicit `CRYPTO_CFLAGS`/`CRYPTO_LIBS` keep the recursive secp256k1 OpenSSL test cross-checks on the pinned depends archive. They do not disable those tests.
+Explicit `CRYPTO_CFLAGS` and `CRYPTO_LIBS` keep recursive secp256k1 OpenSSL test cross-checks on the pinned `depends` archive. They do not disable those tests.
 
-Check all four executables:
+Expected binaries
+-----------------
+
+Both architectures produce:
+
+```text
+src/garlicoind
+src/garlicoin-cli
+src/garlicoin-tx
+src/qt/garlicoin-qt
+```
+
+Create the application bundle with:
+
+```sh
+gmake appbundle
+```
+
+The GUI executable is:
+
+```text
+Garlicoin-Qt.app/Contents/MacOS/Garlicoin-Qt
+```
+
+Architecture and linkage verification
+-------------------------------------
+
+For ARM64, check all executables and the app bundle:
 
 ```sh
 for binary in src/garlicoind src/garlicoin-cli src/garlicoin-tx src/qt/garlicoin-qt; do
@@ -165,10 +154,27 @@ codesign --verify --deep --strict Garlicoin-Qt.app
 test "$(lipo -archs Garlicoin-Qt.app/Contents/MacOS/Garlicoin-Qt)" = arm64
 ```
 
-The local ad-hoc signature seals the ARM64 app's resources. It uses no Apple certificate, identity or credentials and is separate from distribution signing/notarization.
+For Intel, perform the same architecture/linkage checks with `x86_64` as the expected Mach-O architecture.
 
-The release-validation ARM64 job checks every depends archive/native generator, thin ARM64 binaries, deployment load commands, system-only dynamic linkage, app metadata/signature, mounted DMG content, existing focused Core/secp tests, Allium vectors and CLI/Cocoa wallet smoke tests. Additional jobs transfer a throwaway regtest wallet **Intel -> ARM64 -> Intel**, verify ownership/signing/version preservation and delete the generated wallet fixtures.
+The local ad-hoc signature used by the ARM64 validation path seals the app resources. It uses no Apple certificate, identity, or credentials and is separate from Developer ID signing and notarization.
 
-ARM64 artifacts are named `garlicoin-X.Y.Z-osx-arm64.tar.gz` and `garlicoin-X.Y.Z-osx-arm64.dmg`. Intel keeps the existing `osx64` names. The artifact packaging test does not publish a release or change the Core version.
+Release validation
+------------------
 
-Native runtime proof is on macOS 15; load-command deployment 11.0 alone is not a macOS 11 runtime certification. The workflow tests the packaged Cocoa app on the native runner; older macOS runtime compatibility and distribution notarization remain separate validation tasks.
+Do not treat a successful local compile as release validation. `.github/workflows/release-validation-ci.yml` is the source of truth for the current release checks.
+
+The maintained macOS validation covers architecture, deployment load commands, system-only dynamic linkage, app metadata/signature, mounted DMG contents, focused Core/secp tests, Allium vectors, and CLI/Cocoa wallet smoke coverage. The release pipeline also verifies Intel -> ARM64 -> Intel Berkeley DB wallet interchange.
+
+ARM64 artifacts use `garlicoin-X.Y.Z-osx-arm64.tar.gz` and `garlicoin-X.Y.Z-osx-arm64.dmg`. Intel retains the existing `osx64` artifact names.
+
+Runtime and signing limits
+--------------------------
+
+The native CI runtime is macOS 15. A deployment load command of 10.13 or 11.0 is not by itself runtime certification on every older macOS release.
+
+The maintenance pipeline does not currently add Apple Developer ID signing or notarization. Gatekeeper behavior for downloaded public builds remains a separate real-device validation concern.
+
+Legacy paths
+------------
+
+The historical Linux-to-Darwin cross-build workflows and the temporary Qt 5.15/OpenSSL 3 proof workflow have been removed. The maintained release paths are the two native jobs described above.
