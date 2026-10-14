@@ -1,5 +1,6 @@
 name: Windows MinGW CI
 
+# Supports manual runs from the Actions tab.
 on:
   push:
     branches:
