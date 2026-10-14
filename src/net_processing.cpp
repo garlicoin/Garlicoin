@@ -307,11 +307,14 @@ void PushNodeVersion(CNode *pnode, CConnman* connman, int64_t nTime)
 }
 
 // Requires cs_main.
-// Returns a bool indicating whether we requested this block.
+// Returns a bool indicating whether a matching block request was removed.
 // Also used if a block was /not/ received and timed out or started with another peer
-bool MarkBlockAsReceived(const uint256& hash) {
+// If fromPeer is -1, remove the request regardless of its owner.
+bool MarkBlockAsReceived(const uint256& hash, NodeId fromPeer = -1) {
     std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> >::iterator itInFlight = mapBlocksInFlight.find(hash);
     if (itInFlight != mapBlocksInFlight.end()) {
+        if (fromPeer != -1 && itInFlight->second.first != fromPeer)
+            return false;
         CNodeState *state = State(itInFlight->second.first);
         assert(state != nullptr);
         state->nBlocksInFlightValidHeaders -= itInFlight->second.second->fValidatedHeaders;
@@ -2420,7 +2423,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                 PartiallyDownloadedBlock& partialBlock = *(*queuedBlockIt)->partialBlock;
                 ReadStatus status = partialBlock.InitData(cmpctblock, vExtraTxnForCompact);
                 if (status == READ_STATUS_INVALID) {
-                    MarkBlockAsReceived(pindex->GetBlockHash()); // Reset in-flight state in case of whitelist
+                    MarkBlockAsReceived(pindex->GetBlockHash(), pfrom->GetId()); // Reset in-flight state in case of whitelist
                     Misbehaving(pfrom->GetId(), 100);
                     LogPrintf("Peer %d sent us invalid compact block\n", pfrom->GetId());
                     return true;
@@ -2548,7 +2551,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             PartiallyDownloadedBlock& partialBlock = *it->second.second->partialBlock;
             ReadStatus status = partialBlock.FillBlock(*pblock, resp.txn);
             if (status == READ_STATUS_INVALID) {
-                MarkBlockAsReceived(resp.blockhash); // Reset in-flight state in case of whitelist
+                MarkBlockAsReceived(resp.blockhash, pfrom->GetId()); // Reset in-flight state in case of whitelist
                 Misbehaving(pfrom->GetId(), 100);
                 LogPrintf("Peer %d sent us invalid compact block/non-matching block transactions\n", pfrom->GetId());
                 return true;
@@ -2575,7 +2578,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                 // though the block was successfully read, and rely on the
                 // handling in ProcessNewBlock to ensure the block index is
                 // updated, reject messages go out, etc.
-                MarkBlockAsReceived(resp.blockhash); // it is now an empty pointer
+                MarkBlockAsReceived(resp.blockhash, pfrom->GetId()); // it is now an empty pointer
                 fBlockRead = true;
                 // mapBlockSource is only used for sending reject messages and DoS scores,
                 // so the race between here and cs_main in ProcessNewBlock is fine.
@@ -2596,6 +2599,10 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             ProcessNewBlock(chainparams, pblock, /*fForceProcessing=*/true, &fNewBlock);
             if (fNewBlock) {
                 pfrom->nLastBlockTime = GetTime();
+                LOCK(cs_main);
+                const CBlockIndex* pindex = LookupBlockIndex(pblock->GetHash());
+                if (pindex && (pindex->nStatus & BLOCK_HAVE_DATA) && pindex->IsValid(BLOCK_VALID_TRANSACTIONS))
+                    MarkBlockAsReceived(pblock->GetHash());
             } else {
                 LOCK(cs_main);
                 mapBlockSource.erase(pblock->GetHash());
@@ -2642,7 +2649,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             LOCK(cs_main);
             // Also always process if we requested the block explicitly, as we may
             // need it even though it is not a candidate for a new best tip.
-            forceProcessing |= MarkBlockAsReceived(hash);
+            forceProcessing |= mapBlocksInFlight.count(hash) != 0;
+            MarkBlockAsReceived(hash, pfrom->GetId());
             // mapBlockSource is only used for sending reject messages and DoS scores,
             // so the race between here and cs_main in ProcessNewBlock is fine.
             mapBlockSource.emplace(hash, std::make_pair(pfrom->GetId(), true));
@@ -2651,6 +2659,12 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         ProcessNewBlock(chainparams, pblock, forceProcessing, &fNewBlock);
         if (fNewBlock) {
             pfrom->nLastBlockTime = GetTime();
+            // A valid block stored to disk ends the request even if another peer owned it.
+            // fNewBlock alone is insufficient: AcceptBlock sets it before contextual checks.
+            LOCK(cs_main);
+            const CBlockIndex* pindex = LookupBlockIndex(hash);
+            if (pindex && (pindex->nStatus & BLOCK_HAVE_DATA) && pindex->IsValid(BLOCK_VALID_TRANSACTIONS))
+                MarkBlockAsReceived(hash);
         } else {
             LOCK(cs_main);
             mapBlockSource.erase(pblock->GetHash());
