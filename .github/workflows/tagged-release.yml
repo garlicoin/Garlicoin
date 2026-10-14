@@ -37,12 +37,26 @@ jobs:
         run: |
           set -euo pipefail
           RELEASE_TAG="${RELEASE_TAG#release/}"
-          case "$RELEASE_TAG" in
-            v[0-9]*.[0-9]*.[0-9]*) ;;
-            *) echo "Invalid release tag: $RELEASE_TAG"; exit 1 ;;
-          esac
 
-          VERSION="${RELEASE_TAG#v}"
+          if [[ "$RELEASE_TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-rc([1-9][0-9]*))?$ ]]; then
+            TAG_MAJOR="${BASH_REMATCH[1]}"
+            TAG_MINOR="${BASH_REMATCH[2]}"
+            TAG_REVISION="${BASH_REMATCH[3]}"
+            RC_SUFFIX="${BASH_REMATCH[4]}"
+          else
+            echo "Invalid release tag: $RELEASE_TAG"
+            exit 1
+          fi
+
+          VERSION="${TAG_MAJOR}.${TAG_MINOR}.${TAG_REVISION}"
+          RELEASE_LABEL="${RELEASE_TAG#v}"
+          if [ -n "$RC_SUFFIX" ]; then
+            PRERELEASE=true
+            ASSET_VERSION="$RELEASE_LABEL"
+          else
+            PRERELEASE=false
+            ASSET_VERSION="$VERSION"
+          fi
           test -f "doc/release-notes-${VERSION}.md"
 
           MAJOR="$(sed -n 's/^define(_CLIENT_VERSION_MAJOR, \([0-9][0-9]*\))$/\1/p' configure.ac)"
@@ -54,7 +68,8 @@ jobs:
 
           TARGET_SHA="$(git rev-parse HEAD)"
           if [ "${{ github.event_name }}" = create ]; then
-            # A release/vX.Y.Z branch requests publication through the same exact-tag gate.
+            # A release/vX.Y.Z or release/vX.Y.Z-rcN branch requests publication
+            # through the same exact-tag validation gate.
             if tag_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq '.object.sha' 2>/dev/null)"; then
               test "$tag_sha" = "$TARGET_SHA"
             else
@@ -67,6 +82,9 @@ jobs:
           echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
           echo "TARGET_SHA=$TARGET_SHA" >> "$GITHUB_ENV"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "RELEASE_LABEL=$RELEASE_LABEL" >> "$GITHUB_ENV"
+          echo "ASSET_VERSION=$ASSET_VERSION" >> "$GITHUB_ENV"
+          echo "PRERELEASE=$PRERELEASE" >> "$GITHUB_ENV"
 
       - name: Dispatch exact-tag release validation
         env:
@@ -134,14 +152,22 @@ jobs:
           set -euo pipefail
           mkdir -p release-assets
 
-          cp "release-input/linux/garlicoin-${VERSION}-linux-x86_64.tar.gz" release-assets/
-          cp "release-input/linux/garlicoin-${VERSION}.tar.gz" release-assets/
-          cp "release-input/windows/garlicoin-${VERSION}-win64.zip" release-assets/
-          cp "release-input/windows/garlicoin-${VERSION}-win64-setup.exe" release-assets/
-          cp "release-input/macos/garlicoin-${VERSION}-osx64.tar.gz" release-assets/
-          cp "release-input/macos/garlicoin-${VERSION}-osx64.dmg" release-assets/
-          cp "release-input/macos-arm64/garlicoin-${VERSION}-osx-arm64.tar.gz" release-assets/
-          cp "release-input/macos-arm64/garlicoin-${VERSION}-osx-arm64.dmg" release-assets/
+          cp "release-input/linux/garlicoin-${VERSION}-linux-x86_64.tar.gz" \
+            "release-assets/garlicoin-${ASSET_VERSION}-linux-x86_64.tar.gz"
+          cp "release-input/linux/garlicoin-${VERSION}.tar.gz" \
+            "release-assets/garlicoin-${ASSET_VERSION}.tar.gz"
+          cp "release-input/windows/garlicoin-${VERSION}-win64.zip" \
+            "release-assets/garlicoin-${ASSET_VERSION}-win64.zip"
+          cp "release-input/windows/garlicoin-${VERSION}-win64-setup.exe" \
+            "release-assets/garlicoin-${ASSET_VERSION}-win64-setup.exe"
+          cp "release-input/macos/garlicoin-${VERSION}-osx64.tar.gz" \
+            "release-assets/garlicoin-${ASSET_VERSION}-osx64.tar.gz"
+          cp "release-input/macos/garlicoin-${VERSION}-osx64.dmg" \
+            "release-assets/garlicoin-${ASSET_VERSION}-osx64.dmg"
+          cp "release-input/macos-arm64/garlicoin-${VERSION}-osx-arm64.tar.gz" \
+            "release-assets/garlicoin-${ASSET_VERSION}-osx-arm64.tar.gz"
+          cp "release-input/macos-arm64/garlicoin-${VERSION}-osx-arm64.dmg" \
+            "release-assets/garlicoin-${ASSET_VERSION}-osx-arm64.dmg"
 
           (
             cd release-assets
@@ -150,13 +176,17 @@ jobs:
 
           rm -rf /tmp/grlc-release-check
           mkdir -p /tmp/grlc-release-check
-          tar -xzf "release-assets/garlicoin-${VERSION}-linux-x86_64.tar.gz" -C /tmp/grlc-release-check
+          tar -xzf "release-assets/garlicoin-${ASSET_VERSION}-linux-x86_64.tar.gz" -C /tmp/grlc-release-check
           FIRST_LINE="$(/tmp/grlc-release-check/garlicoin-${VERSION}/bin/garlicoind --version | head -n1)"
           echo "$FIRST_LINE"
-          # Git's default abbreviation length can differ between build and publisher clones.
           SOURCE_SHA="$(git rev-parse HEAD)"
-          VERSION_PREFIX="Garlicoin Core Daemon version v${VERSION}"
-          if [ "$FIRST_LINE" != "$VERSION_PREFIX" ]; then
+          VERSION_PREFIX="Garlicoin Core Daemon version v${RELEASE_LABEL}"
+
+          if [ "$PRERELEASE" = true ]; then
+            # An RC must identify itself with the exact rc tag, not merely the base version.
+            test "$FIRST_LINE" = "$VERSION_PREFIX"
+          elif [ "$FIRST_LINE" != "$VERSION_PREFIX" ]; then
+            # Git's default abbreviation length can differ between build and publisher clones.
             SOURCE_SUFFIX="${FIRST_LINE#"$VERSION_PREFIX.0-"}"
             [[ "$SOURCE_SUFFIX" =~ ^[0-9a-f]{7,40}$ ]]
             [[ "$SOURCE_SHA" == "$SOURCE_SUFFIX"* ]]
@@ -170,14 +200,35 @@ jobs:
           set -euo pipefail
           NOTES="doc/release-notes-${VERSION}.md"
 
+          if [ "$PRERELEASE" = true ]; then
+            TITLE="Garlicoin Core ${RELEASE_LABEL} - Apple Silicon Release Candidate"
+          else
+            TITLE="Garlicoin Core ${VERSION} - GRLC.eu Maintenance Release"
+          fi
+
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" release-assets/* --clobber
-            gh release edit "$RELEASE_TAG" \
-              --title "Garlicoin Core ${VERSION} - GRLC.eu Maintenance Release" \
-              --notes-file "$NOTES"
+            if [ "$PRERELEASE" = true ]; then
+              gh release edit "$RELEASE_TAG" \
+                --prerelease \
+                --title "$TITLE" \
+                --notes-file "$NOTES"
+            else
+              gh release edit "$RELEASE_TAG" \
+                --title "$TITLE" \
+                --notes-file "$NOTES"
+            fi
           else
-            gh release create "$RELEASE_TAG" release-assets/* \
-              --verify-tag \
-              --title "Garlicoin Core ${VERSION} - GRLC.eu Maintenance Release" \
-              --notes-file "$NOTES"
+            if [ "$PRERELEASE" = true ]; then
+              gh release create "$RELEASE_TAG" release-assets/* \
+                --verify-tag \
+                --prerelease \
+                --title "$TITLE" \
+                --notes-file "$NOTES"
+            else
+              gh release create "$RELEASE_TAG" release-assets/* \
+                --verify-tag \
+                --title "$TITLE" \
+                --notes-file "$NOTES"
+            fi
           fi
