@@ -198,7 +198,7 @@ jobs:
           NOTES="doc/release-notes-${VERSION}.md"
 
           if [ "$PRERELEASE" = true ]; then
-            TITLE="Garlicoin Core ${RELEASE_LABEL} - Apple Silicon Release Candidate"
+            TITLE="Garlicoin Core ${RELEASE_LABEL} - Release Candidate"
           else
             TITLE="Garlicoin Core ${VERSION} - GRLC.eu Maintenance Release"
           fi
