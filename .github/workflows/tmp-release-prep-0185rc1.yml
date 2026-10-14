@@ -1,0 +1,53 @@
+name: Temporary 0.18.5 RC1 version bump
+
+on:
+  push:
+    branches:
+      - release/0.18.5-rc1-prep
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout release-prep branch
+        uses: actions/checkout@v4
+        with:
+          ref: release/0.18.5-rc1-prep
+          fetch-depth: 0
+
+      - name: Bump Core package version to 0.18.5
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('configure.ac')
+          text = path.read_text()
+          old = 'define(_CLIENT_VERSION_REVISION, 4)'
+          new = 'define(_CLIENT_VERSION_REVISION, 5)'
+          if old in text:
+              if text.count(old) != 1:
+                  raise SystemExit('unexpected number of 0.18.4 revision declarations')
+              text = text.replace(old, new, 1)
+              path.write_text(text)
+          elif new not in text:
+              raise SystemExit('expected revision declaration not found')
+          PY
+
+      - name: Commit version bump
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- configure.ac; then
+            echo 'configure.ac already at 0.18.5'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add configure.ac
+          git commit -m 'build: bump Core version to 0.18.5'
+          git push origin HEAD:release/0.18.5-rc1-prep
