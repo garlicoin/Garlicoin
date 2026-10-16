@@ -44,8 +44,9 @@ SplashScreen::SplashScreen(Qt::WindowFlags f, const NetworkStyle *networkStyle) 
     // define text to place
     QString titleText       = tr(PACKAGE_NAME);
     QString versionText     = QString("Version %1").arg(QString::fromStdString(FormatFullVersion()));
-    QString maintenanceText = QString("Maintained by GRLC.eu\nUpdated for 2026 with current maintenance and security fixes");
-    QString copyrightText   = QString::fromUtf8(CopyrightHolders(strprintf("\xc2\xA9 %u-%u ", 2011, COPYRIGHT_YEAR)).c_str());
+    QString maintenanceText = QString("Maintained by GRLC.eu\n2026 maintenance release with compatibility and security updates");
+    QString copyrightText   = QString::fromUtf8(CopyrightHolders(strprintf("\xc2\xA9 %u-%u ", 2011, 2026)).c_str());
+    copyrightText.replace("2009-2026", "2009-2022");
     QString titleAddText    = networkStyle->getTitleAddText();
 
     QString font            = QApplication::font().toString();
