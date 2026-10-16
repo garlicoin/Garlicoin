@@ -41,6 +41,6 @@ Release artifacts
 
 Final binaries, source archive, and SHA256 checksums are published with the GitHub release:
 
-https://github.com/tomiiiiiiiiiiiiii/Garlicoin/releases/tag/v0.18.4
+https://github.com/garlicoin/Garlicoin/releases/tag/v0.18.4
 
 Verify downloaded artifacts against the published `SHA256SUMS` file before installation.
