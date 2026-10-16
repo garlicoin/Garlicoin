@@ -138,10 +138,12 @@ For a stable release:
 - use `Garlicoin Core X.Y.Z - GRLC.eu Maintenance Release` as the maintained release title;
 - verify the release page, download links, asset names, checksums, and reported binary versions after publication.
 
+The published `v0.18.5` stable release is the current reference example. The `release/v0.18.5` request targeted commit `241847936223a3024cdb507d2b43bbb29aa33694`; exact-tag Release Validation run `38888269314` passed, Tagged Release Publisher run `38888241886` completed successfully, and the resulting GitHub Release was published as the stable GRLC.eu maintenance release.
+
 After publication
 -----------------
 
-- Confirm the root `README.md` points to the current stable release and correct downloads.
+- Confirm `doc/README.md` and the root `README.md` point to the current stable release and correct downloads.
 - Keep version-specific release notes in `doc/` as the durable repository record.
 - Keep the successful exact-tag validation and publishing runs long enough to provide a clear release audit trail.
 - Record any release-specific regression or follow-up work as a separate issue or maintenance change rather than silently altering an already published artifact.
