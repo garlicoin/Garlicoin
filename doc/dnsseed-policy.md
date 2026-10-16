@@ -18,6 +18,6 @@ If an operator can no longer meet these expectations, the seed should be withdra
 
 For issues concerning seeds used by this maintained source tree, open an issue in the maintained repository:
 
-https://github.com/tomiiiiiiiiiiiiii/Garlicoin/issues
+https://github.com/garlicoin/Garlicoin/issues
 
 The actual seed list used by a release is defined in `src/chainparams.cpp`; that source file is authoritative.
