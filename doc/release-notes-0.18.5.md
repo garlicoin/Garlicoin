@@ -4,6 +4,17 @@ Garlicoin Core 0.18.5 release notes
 Garlicoin Core 0.18.5 is the stable maintenance release for the maintained 0.18.x line.
 It promotes the 0.18.5 release-candidate work after automated release validation and real Apple Silicon testing, and supersedes v0.18.4 as the current stable release.
 
+Published release
+-----------------
+
+Garlicoin Core v0.18.5 was published on 2026-10-16 from commit `241847936223a3024cdb507d2b43bbb29aa33694`. The public `v0.18.5` tag points to that exact commit.
+
+The final exact-tag Release Validation run `38888269314` completed successfully across the maintained release matrix, and Tagged Release Publisher run `38888241886` then assembled the final assets, generated `SHA256SUMS`, verified the packaged version, and published the stable GitHub release.
+
+Release page:
+
+https://github.com/garlicoin/Garlicoin/releases/tag/v0.18.5
+
 Highlights
 ----------
 
@@ -58,7 +69,7 @@ The 0.18.5 release-candidate line passed the maintained release-validation pipel
 
 A real Apple Silicon end-user test also confirmed that the ARM64 build launches and connects to peers successfully.
 
-The final `v0.18.5` tag is rebuilt and validated again by the exact-tag release pipeline before public release artifacts are published.
+The final `v0.18.5` tag was rebuilt and validated again by the exact-tag release pipeline before the public release artifacts were published.
 
 Signing and Gatekeeper
 ----------------------
