@@ -5,7 +5,7 @@ This directory contains documentation relevant to the maintained Garlicoin Core 
 
 The repository source, `depends` recipes, chain parameters, and GitHub Actions workflows are the source of truth when a document and the implementation disagree. The currently validated release platforms are Linux x86_64, Windows x86_64 (MinGW), native macOS Intel x86_64, and native macOS Apple Silicon ARM64.
 
-The latest published pre-release is Garlicoin Core 0.18.5-rc2. The current stable release remains 0.18.4 until 0.18.5 is promoted after release-candidate validation.
+The current stable release is Garlicoin Core 0.18.5, published on 2026-10-16 after successful exact-tag release validation. The preceding 0.18.5-rc2 pre-release remains available as historical release-candidate context.
 
 Building
 --------
@@ -39,7 +39,7 @@ Operation and integration
 Release notes
 -------------
 
-- [Garlicoin Core 0.18.5 / 0.18.5-rc2](release-notes-0.18.5.md)
+- [Garlicoin Core 0.18.5](release-notes-0.18.5.md)
 - [Garlicoin Core 0.18.4](release-notes-0.18.4.md)
 - [Garlicoin Core 0.18.3](release-notes-0.18.3.md)
 - [Garlicoin Core 0.18.2](release-notes-0.18.2.md)
