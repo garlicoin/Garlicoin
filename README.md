@@ -14,7 +14,7 @@ This is the actively maintained Garlicoin Core repository under the [garlicoin](
 
 Official website: [garlicoin.io](https://garlicoin.io/)
 
-Network infrastructure, explorer and project services: [grlc.eu](https://grlc.eu/)
+Network infrastructure, explorer and project services: [grlc.eu](https://grlc.eu/) and [garlicoin.org](https://garlicoin.org/)
 
 Garlicoin Core **0.18.6** is the current stable maintenance release. It adds native Linux ARM64 daemon, CLI and GUI packages, fixes historical reindexing and peer timestamp overflow, and unifies website and source attribution in Qt About and daemon version output. See [0.18.6 release notes](doc/release-notes-0.18.6.md).
 
