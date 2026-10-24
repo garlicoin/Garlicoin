@@ -122,6 +122,15 @@ jobs:
         shell: bash
         run: gh run download "$RELEASE_RUN_ID" -n release-linux-x86_64 -D release-input/linux
 
+      - name: Download Linux ARM64 release artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run download "$RELEASE_RUN_ID" -n release-linux-arm64 -D release-input/linux-arm64
+          (cd release-input/linux-arm64 && sha256sum -c SHA256SUMS)
+
       - name: Download Windows release artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -153,6 +162,8 @@ jobs:
             "release-assets/garlicoin-${ASSET_VERSION}-linux-x86_64.tar.gz"
           cp "release-input/linux/garlicoin-${VERSION}.tar.gz" \
             "release-assets/garlicoin-${ASSET_VERSION}.tar.gz"
+          cp "release-input/linux-arm64/garlicoin-${VERSION}-linux-arm64.tar.gz" \
+            "release-assets/garlicoin-${ASSET_VERSION}-linux-arm64.tar.gz"
           cp "release-input/windows/garlicoin-${VERSION}-win64.zip" \
             "release-assets/garlicoin-${ASSET_VERSION}-win64.zip"
           cp "release-input/windows/garlicoin-${VERSION}-win64-setup.exe" \
