@@ -70,6 +70,9 @@ public:
     }
 };
 
+/** Return false if the peer time difference is not representable in int64_t. */
+bool ComputePeerTimeOffset(int64_t peer_time, int64_t local_time, int64_t& offset);
+
 /** Functions to keep track of adjusted P2P time */
 int64_t GetTimeOffset();
 int64_t GetAdjustedTime();
