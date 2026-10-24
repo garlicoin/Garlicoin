@@ -527,18 +527,25 @@ std::string HelpMessage(HelpMessageMode mode)
 
 std::string LicenseInfo()
 {
-    const std::string URL_SOURCE_CODE = "<https://github.com/GarlicoinOrg/Garlicoin>";
     const std::string URL_WEBSITE = "<https://garlicoin.io>";
+    const std::string URL_GRLC_EU = "<https://grlc.eu>";
+    const std::string URL_GARLICOIN_ORG = "<https://garlicoin.org>";
+    const std::string URL_SOURCE_CODE = "<https://github.com/garlicoin/Garlicoin>";
 
-    return CopyrightHolders(strprintf(_("Copyright (C) %i-%i"), 2011, COPYRIGHT_YEAR) + " ") + "\n" +
+    std::string copyrightInfo = CopyrightHolders(strprintf(_("Copyright (C) %i-%i"), 2011, 2026) + " ");
+    // The Bitcoin Core copyright period remains 2009-2022.
+    boost::replace_all(copyrightInfo, "2009-2026", "2009-2022");
+
+    return copyrightInfo + "\n" +
            "\n" +
-           strprintf(_("Please contribute if you find %s useful. "
-                       "Visit %s for further information about the software."),
-               PACKAGE_NAME, URL_WEBSITE) +
+           strprintf(_("Official website: %s"), URL_WEBSITE) + "\n" +
+           _("Additional resources:") + "\n" +
+           "  " + URL_GRLC_EU + "\n" +
+           "  " + URL_GARLICOIN_ORG + "\n" +
            "\n" +
-           strprintf(_("The source code is available from %s."),
-               URL_SOURCE_CODE) +
+           strprintf(_("Source code: %s"), URL_SOURCE_CODE) + "\n" +
            "\n" +
+           _("Maintained by GRLC.eu") + "\n" +
            "\n" +
            _("This is experimental software.") + "\n" +
            strprintf(_("Distributed under the MIT software license, see the accompanying file %s or %s"), "COPYING", "<https://opensource.org/licenses/MIT>") + "\n" +

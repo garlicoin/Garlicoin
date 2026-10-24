@@ -50,17 +50,8 @@ HelpMessageDialog::HelpMessageDialog(QWidget *parent, bool about) :
     {
         setWindowTitle(tr("About %1").arg(tr(PACKAGE_NAME)));
 
-        /// HTML-format the license message from the core
+        /// HTML-format the shared license message from the core
         QString licenseInfo = QString::fromStdString(LicenseInfo());
-        licenseInfo.replace(QString("2011-%1").arg(COPYRIGHT_YEAR), "2011-2026");
-        licenseInfo.replace(
-            "Please contribute if you find Garlicoin Core useful. Visit <https://garlicoin.io> for further information about the software.",
-            "This maintained edition of Garlicoin Core is provided by GRLC.eu. Visit <https://grlc.eu> for current project information.");
-        licenseInfo.replace("<https://garlicoin.io>", "<https://grlc.eu>");
-        licenseInfo.replace(
-            "<https://github.com/GarlicoinOrg/Garlicoin>",
-            "<https://github.com/garlicoin/Garlicoin>");
-
         QString licenseInfoHTML = licenseInfo;
         // Make URLs clickable
         QRegExp uri("<(.*)>", Qt::CaseSensitive, QRegExp::RegExp2);
@@ -69,13 +60,14 @@ HelpMessageDialog::HelpMessageDialog(QWidget *parent, bool about) :
         // Replace newlines with HTML breaks
         licenseInfoHTML.replace("\n", "<br>");
 
+        // Maintainer attribution is included once in the shared LicenseInfo().
+        licenseInfoHTML.replace("Maintained by GRLC.eu", "<b>Maintained by GRLC.eu</b>");
         const QString maintenanceInfo =
-            "<b>Maintained by GRLC.eu</b><br>"
             "2026 maintenance release with compatibility and security updates";
 
         ui->aboutMessage->setTextFormat(Qt::RichText);
         ui->scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-        text = version + "\nMaintained by GRLC.eu\n2026 maintenance release with compatibility and security updates\n" + licenseInfo;
+        text = version + "\n2026 maintenance release with compatibility and security updates\n" + licenseInfo;
         ui->aboutMessage->setText(version + "<br><br>" + maintenanceInfo + "<br><br>" + licenseInfoHTML);
         ui->aboutMessage->setWordWrap(true);
         ui->helpMessage->setVisible(false);
