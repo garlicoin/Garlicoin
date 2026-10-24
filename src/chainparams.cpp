@@ -76,8 +76,8 @@ public:
         strNetworkID = "main";
         consensus.nSubsidyHalvingInterval = 690000;
         consensus.BIP16Height = 0;
-        consensus.BIP34Height = 0;
-        consensus.BIP34Hash = uint256S("0x2ada80bf415a89358d697569c96eb98cdbf4c3b8878ac5722c01284492e27228");
+        consensus.BIP34Height = 1;
+        consensus.BIP34Hash = uint256S("0x5918e02d88ad28a3f43d69d2f5a4894f9c83fed70112d637ed7dec3069a54184");
         consensus.BIP65Height = 0; // bab3041e8977e0dc3eeff63fe707b92bde1dd449d8efafb248c27c8264cc311a
         consensus.BIP66Height = 0; // 7aceee012833fa8952f8835d8b1b3ae233cd6ab08fdb27a771d2bd7bdc491894
         consensus.powLimit = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
