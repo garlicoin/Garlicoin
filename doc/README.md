@@ -3,9 +3,9 @@ Garlicoin Core documentation
 
 This directory contains documentation relevant to the maintained Garlicoin Core 0.18.x line.
 
-The repository source, `depends` recipes, chain parameters, and GitHub Actions workflows are the source of truth when a document and the implementation disagree. The currently validated release platforms are Linux x86_64, Windows x86_64 (MinGW), native macOS Intel x86_64, and native macOS Apple Silicon ARM64.
+The repository source, `depends` recipes, chain parameters, and GitHub Actions workflows are the source of truth when a document and the implementation disagree. The currently validated release platforms are Linux x86_64, native Linux ARM64, Windows x86_64 (MinGW), native macOS Intel x86_64, and native macOS Apple Silicon ARM64.
 
-The current stable release is Garlicoin Core 0.18.5, published on 2026-10-16 after successful exact-tag release validation. The preceding 0.18.5-rc2 pre-release remains available as historical release-candidate context.
+The current stable release is Garlicoin Core 0.18.6, with native Linux ARM64 packaging and focused reindex/P2P hardening. The preceding 0.18.5 release remains available as historical reference.
 
 Building
 --------
@@ -39,6 +39,7 @@ Operation and integration
 Release notes
 -------------
 
+- [Garlicoin Core 0.18.6](release-notes-0.18.6.md)
 - [Garlicoin Core 0.18.5](release-notes-0.18.5.md)
 - [Garlicoin Core 0.18.4](release-notes-0.18.4.md)
 - [Garlicoin Core 0.18.3](release-notes-0.18.3.md)
