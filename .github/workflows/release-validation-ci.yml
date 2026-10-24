@@ -113,6 +113,102 @@ jobs:
           path: artifacts/
           if-no-files-found: error
 
+  linux-arm64-release:
+    name: Linux ARM64 release package and smoke tests
+    runs-on: ubuntu-22.04-arm
+    timeout-minutes: 180
+    env:
+      HOST: aarch64-unknown-linux-gnu
+      MAKEJOBS: -j2
+      GARLICOIN_SCRYPT: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify native ARM64 runner and install tools
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = aarch64
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            autoconf automake autotools-dev bison bsdmainutils build-essential \
+            ca-certificates ccache curl file git libtool pkg-config python3 \
+            xvfb xauth
+
+      - name: Cache ARM64 depends
+        uses: actions/cache@v4
+        with:
+          path: |
+            depends/built
+            depends/sources
+          key: garlicoin-release-linux-\${{ runner.os }}-\${{ env.HOST }}-\${{ hashFiles('depends/**') }}
+          restore-keys: |
+            garlicoin-release-linux-\${{ runner.os }}-\${{ env.HOST }}-
+
+      - name: Build full ARM64 dependencies including Qt and BDB
+        run: make \${MAKEJOBS} -C depends HOST="\${HOST}"
+
+      - name: Configure and build Linux ARM64
+        run: |
+          set -euo pipefail
+          ./autogen.sh
+          CONFIG_SITE="$PWD/depends/\${HOST}/share/config.site" \
+            ./configure \
+              --prefix=/ \
+              --enable-wallet \
+              --with-gui=qt5 \
+              --enable-tests \
+              --disable-bench
+          VERSION="$(sed -n 's/^PACKAGE_VERSION = //p' Makefile)"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          make \${MAKEJOBS}
+
+      - name: Run ARM64 consensus and wallet smoke tests
+        run: |
+          set -euo pipefail
+          src/test/test_garlicoin --run_test=pow_tests
+          src/test/test_garlicoin --run_test=base58_tests
+          src/test/test_garlicoin --run_test=key_tests/key_test1
+          src/test/test_garlicoin --run_test=miner_tests/CreateNewBlock_validity
+          python3 test/functional/test_runner.py \
+            --jobs=1 --combinedlogslen=100 \
+            rpc_uptime.py interface_bitcoin_cli.py wallet_encryption.py
+
+      - name: Validate ARM64 binaries and assemble release package
+        run: |
+          set -euo pipefail
+          rm -rf release-stage release-package artifacts
+          mkdir -p release-stage "release-package/garlicoin-\${VERSION}" artifacts
+          make install-strip DESTDIR="$PWD/release-stage"
+          for binary in garlicoind garlicoin-cli garlicoin-qt; do
+            test -f "release-stage/bin/\${binary}"
+            file "release-stage/bin/\${binary}"
+            file "release-stage/bin/\${binary}" | grep -q 'ELF 64-bit LSB'
+            file "release-stage/bin/\${binary}" | grep -Eqi 'aarch64|ARM64'
+          done
+          release-stage/bin/garlicoind --version
+          release-stage/bin/garlicoin-cli --version
+          xvfb-run -a release-stage/bin/garlicoin-qt -version
+
+          cp -a release-stage/. "release-package/garlicoin-\${VERSION}/"
+          cp README.md "release-package/garlicoin-\${VERSION}/"
+          tar -C release-package -czf \
+            "artifacts/garlicoin-\${VERSION}-linux-arm64.tar.gz" \
+            "garlicoin-\${VERSION}"
+
+      - name: Hash and upload ARM64 release package
+        run: |
+          set -euo pipefail
+          (cd artifacts && sha256sum * | tee SHA256SUMS)
+
+      - name: Upload Linux ARM64 release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-arm64
+          path: artifacts/
+          if-no-files-found: error
+
   windows-release:
     name: Windows x86_64 release package
     runs-on: ubuntu-22.04
