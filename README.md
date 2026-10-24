@@ -18,6 +18,8 @@ Network infrastructure, explorer and project services: [grlc.eu](https://grlc.eu
 
 Garlicoin Core **0.18.6** is the current stable maintenance release. It adds native Linux ARM64 daemon, CLI and GUI packages, fixes historical reindexing and peer timestamp overflow, and unifies website and source attribution in Qt About and daemon version output. See [0.18.6 release notes](doc/release-notes-0.18.6.md).
 
+For peer-time security hardening and historical reindex fixes, upgrade to [Garlicoin Core v0.18.6](https://github.com/garlicoin/Garlicoin/releases/tag/v0.18.6). Earlier releases do not include these fixes.
+
 The maintained 0.18.x line preserves Garlicoin consensus, Allium proof of work, DarkGravityWave, wallet format, address formats, network identity and existing user datadirs. Garlicoin is Litecoin-derived, with Litecoin Core 0.18.1 used as the primary upstream reference for compatible maintenance fixes.
 
 The **0.18.6** release is published as the **GRLC.eu Maintenance Release**, reflecting the infrastructure and maintenance work used to maintain the 0.18.x line. The project itself remains Garlicoin Core.
@@ -67,13 +69,6 @@ Stable downloads:
 - [macOS tarball (Apple Silicon ARM64)](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.6/garlicoin-0.18.6-osx-arm64.tar.gz)
 - [Source tarball](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.6/garlicoin-0.18.6.tar.gz)
 - [SHA256SUMS](https://github.com/garlicoin/Garlicoin/releases/download/v0.18.6/SHA256SUMS)
-
-### Previous stable: Garlicoin Core 0.18.5
-
-The previous stable **v0.18.5** release, introducing native macOS Apple Silicon,
-is still available.
-
-[View the v0.18.5 release](https://github.com/garlicoin/Garlicoin/releases/tag/v0.18.5)
 
 See [`doc/release-notes-0.18.6.md`](doc/release-notes-0.18.6.md) for details
 of the current maintenance release.
