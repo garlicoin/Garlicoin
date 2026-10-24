@@ -32,6 +32,46 @@ CONFIG_SITE="$PWD/depends/$HOST/share/config.site" \
 make
 ```
 
+For a native Linux ARM64 (AArch64) build with daemon, CLI, wallet and Qt GUI,
+use an ARM64 Ubuntu 22.04 host or the matching GitHub Actions runner:
+
+```sh
+test "$(uname -m)" = aarch64
+HOST=aarch64-unknown-linux-gnu
+make -j2 -C depends HOST="$HOST"
+
+./autogen.sh
+CONFIG_SITE="$PWD/depends/$HOST/share/config.site" \
+  ./configure --enable-wallet --with-gui=qt5
+
+make -j2
+```
+
+Native ARM64 support uses the same pinned depends versions as x86_64, including
+Berkeley DB 4.8 for existing wallets. The ARM64 release package is built and
+tested in `.github/workflows/release-validation-ci.yml`, and can be published
+as `garlicoin-VERSION-linux-arm64.tar.gz` by the tagged release workflow after
+the release validation jobs pass. This is a separate native target, not an
+emulated x86_64 package.
+
+The Linux ARM64 GUI uses system-provided X11/XCB runtime libraries, even
+though Qt is built from the pinned depends sources. On Ubuntu 22.04 ARM64,
+install the GUI runtime packages before launching `garlicoin-qt`:
+
+```sh
+sudo apt-get update
+sudo apt-get install -y --no-install-recommends \
+  libx11-6 libx11-xcb1 libxext6 libxcb1 libxcb-icccm4 \
+  libxcb-image0 libxcb-keysyms1 libxcb-render-util0 \
+  libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libxcb-util1 \
+  libxkbcommon0 libxkbcommon-x11-0
+```
+
+These are operating-system runtime requirements, not dependencies bundled
+into the release tarball. The ARM64 release CI uses `ldd` to check for missing
+libraries and starts the packaged GUI under Xvfb before publishing the artifact.
+Daemon-only usage does not require the GUI runtime packages.
+
 For a headless build without wallet, Qt, UPnP, or ZMQ:
 
 ```sh

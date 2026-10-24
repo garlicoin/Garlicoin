@@ -106,7 +106,11 @@ $(package)_config_opts_linux += -no-opengl
 $(package)_config_opts_arm_linux += -platform linux-g++ -xplatform bitcoin-linux-g++
 $(package)_config_opts_i686_linux  = -xplatform linux-g++-32
 $(package)_config_opts_x86_64_linux = -xplatform linux-g++-64
+ifeq ($(build_arch),aarch64)
+$(package)_config_opts_aarch64_linux = -xplatform linux-g++
+else
 $(package)_config_opts_aarch64_linux = -xplatform linux-aarch64-gnu-g++
+endif
 $(package)_config_opts_riscv64_linux = -platform linux-g++ -xplatform bitcoin-linux-g++
 $(package)_config_opts_mingw32  = -no-opengl -xplatform win32-g++ -device-option CROSS_COMPILE="$(host)-"
 # Qt's Windows fallback omits the system libraries required by static OpenSSL.
