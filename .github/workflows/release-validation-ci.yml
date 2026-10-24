@@ -141,18 +141,18 @@ jobs:
           path: |
             depends/built
             depends/sources
-          key: garlicoin-release-linux-\${{ runner.os }}-\${{ env.HOST }}-\${{ hashFiles('depends/**') }}
+          key: garlicoin-release-linux-${{ runner.os }}-${{ env.HOST }}-${{ hashFiles('depends/**') }}
           restore-keys: |
-            garlicoin-release-linux-\${{ runner.os }}-\${{ env.HOST }}-
+            garlicoin-release-linux-${{ runner.os }}-${{ env.HOST }}-
 
       - name: Build full ARM64 dependencies including Qt and BDB
-        run: make \${MAKEJOBS} -C depends HOST="\${HOST}"
+        run: make ${MAKEJOBS} -C depends HOST="${HOST}"
 
       - name: Configure and build Linux ARM64
         run: |
           set -euo pipefail
           ./autogen.sh
-          CONFIG_SITE="$PWD/depends/\${HOST}/share/config.site" \
+          CONFIG_SITE="$PWD/depends/${HOST}/share/config.site" \
             ./configure \
               --prefix=/ \
               --enable-wallet \
@@ -162,7 +162,7 @@ jobs:
           VERSION="$(sed -n 's/^PACKAGE_VERSION = //p' Makefile)"
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          make \${MAKEJOBS}
+          make ${MAKEJOBS}
 
       - name: Run ARM64 consensus and wallet smoke tests
         run: |
@@ -179,23 +179,23 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf release-stage release-package artifacts
-          mkdir -p release-stage "release-package/garlicoin-\${VERSION}" artifacts
+          mkdir -p release-stage "release-package/garlicoin-${VERSION}" artifacts
           make install-strip DESTDIR="$PWD/release-stage"
           for binary in garlicoind garlicoin-cli garlicoin-qt; do
-            test -f "release-stage/bin/\${binary}"
-            file "release-stage/bin/\${binary}"
-            file "release-stage/bin/\${binary}" | grep -q 'ELF 64-bit LSB'
-            file "release-stage/bin/\${binary}" | grep -Eqi 'aarch64|ARM64'
+            test -f "release-stage/bin/${binary}"
+            file "release-stage/bin/${binary}"
+            file "release-stage/bin/${binary}" | grep -q 'ELF 64-bit LSB'
+            file "release-stage/bin/${binary}" | grep -Eqi 'aarch64|ARM64'
           done
           release-stage/bin/garlicoind --version
           release-stage/bin/garlicoin-cli --version
           xvfb-run -a release-stage/bin/garlicoin-qt -version
 
-          cp -a release-stage/. "release-package/garlicoin-\${VERSION}/"
-          cp README.md "release-package/garlicoin-\${VERSION}/"
+          cp -a release-stage/. "release-package/garlicoin-${VERSION}/"
+          cp README.md "release-package/garlicoin-${VERSION}/"
           tar -C release-package -czf \
-            "artifacts/garlicoin-\${VERSION}-linux-arm64.tar.gz" \
-            "garlicoin-\${VERSION}"
+            "artifacts/garlicoin-${VERSION}-linux-arm64.tar.gz" \
+            "garlicoin-${VERSION}"
 
       - name: Hash and upload ARM64 release package
         run: |
