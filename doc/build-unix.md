@@ -32,6 +32,28 @@ CONFIG_SITE="$PWD/depends/$HOST/share/config.site" \
 make
 ```
 
+For a native Linux ARM64 (AArch64) build with daemon, CLI, wallet and Qt GUI,
+use an ARM64 Ubuntu 22.04 host or the matching GitHub Actions runner:
+
+```sh
+test "$(uname -m)" = aarch64
+HOST=aarch64-unknown-linux-gnu
+make -j2 -C depends HOST="$HOST"
+
+./autogen.sh
+CONFIG_SITE="$PWD/depends/$HOST/share/config.site" \
+  ./configure --enable-wallet --with-gui=qt5
+
+make -j2
+```
+
+Native ARM64 support uses the same pinned depends versions as x86_64, including
+Berkeley DB 4.8 for existing wallets. The ARM64 release package is built and
+tested in `.github/workflows/release-validation-ci.yml`, and can be published
+as `garlicoin-VERSION-linux-arm64.tar.gz` by the tagged release workflow after
+the release validation jobs pass. This is a separate native target, not an
+emulated x86_64 package.
+
 For a headless build without wallet, Qt, UPnP, or ZMQ:
 
 ```sh

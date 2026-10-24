@@ -29,3 +29,16 @@ i686_linux_CXX=$(default_host_CXX) -m32
 x86_64_linux_CC=$(default_host_CC) -m64
 x86_64_linux_CXX=$(default_host_CXX) -m64
 endif
+
+# Native aarch64 Linux does not use a cross-compiler prefix. Keep the
+# default aarch64-... toolchain for cross builds from other architectures.
+ifeq ($(build_arch),aarch64)
+ifeq ($(host_arch),aarch64)
+aarch64_linux_CC=gcc
+aarch64_linux_CXX=g++
+aarch64_linux_AR=ar
+aarch64_linux_RANLIB=ranlib
+aarch64_linux_NM=nm
+aarch64_linux_STRIP=strip
+endif
+endif
