@@ -8,6 +8,7 @@
 
 #include <timedata.h>
 
+#include <limits>
 #include <netaddress.h>
 #include <sync.h>
 #include <ui_interface.h>
@@ -35,6 +36,17 @@ int64_t GetTimeOffset()
 int64_t GetAdjustedTime()
 {
     return GetTime() + GetTimeOffset();
+}
+
+bool ComputePeerTimeOffset(int64_t peer_time, int64_t local_time, int64_t& offset)
+{
+    // VERSION timestamps are untrusted. Avoid signed overflow on subtraction.
+    if ((local_time > 0 && peer_time < std::numeric_limits<int64_t>::min() + local_time) ||
+        (local_time < 0 && peer_time > std::numeric_limits<int64_t>::max() + local_time)) {
+        return false;
+    }
+    offset = peer_time - local_time;
+    return true;
 }
 
 #define BITCOIN_TIMEDATA_MAX_SAMPLES 200

@@ -1769,9 +1769,13 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                   pfrom->nStartingHeight, addrMe.ToString(), pfrom->GetId(),
                   remoteAddr);
 
-        int64_t nTimeOffset = nTime - GetTime();
-        pfrom->nTimeOffset = nTimeOffset;
-        AddTimeData(pfrom->addr, nTimeOffset);
+        int64_t nTimeOffset;
+        if (ComputePeerTimeOffset(nTime, GetTime(), nTimeOffset)) {
+            pfrom->nTimeOffset = nTimeOffset;
+            AddTimeData(pfrom->addr, nTimeOffset);
+        } else {
+            LogPrint(BCLog::NET, "Ignoring out-of-range timestamp from peer=%d\n", pfrom->GetId());
+        }
 
         // If the peer is old enough to have the old alert system, send it the final alert.
         if (pfrom->nVersion <= 70012) {
